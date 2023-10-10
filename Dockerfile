@@ -1,11 +1,7 @@
 ARG CUDA_VERSION=11.8.0
 ARG OS_VERSION=22.04
-ARG USER_ID=1000
 # Define base image.
 FROM nvidia/cuda:${CUDA_VERSION}-devel-ubuntu${OS_VERSION}
-ARG CUDA_VERSION
-ARG OS_VERSION
-ARG USER_ID
 
 # metainformation
 LABEL org.opencontainers.image.version = "0.1.18"
@@ -103,7 +99,7 @@ RUN git clone --branch 3.8 https://github.com/colmap/colmap.git --single-branch 
     rm -rf colmap
 
 # Create non root user and setup environment.
-RUN useradd -m -d /home/user -g root -G sudo -u ${USER_ID} user
+RUN useradd -m -d /home/user -g root -G sudo -u 1000 user
 RUN usermod -aG sudo user
 # Set user password
 RUN echo "user:user" | chpasswd
@@ -111,7 +107,7 @@ RUN echo "user:user" | chpasswd
 RUN echo '%sudo ALL=(ALL) NOPASSWD:ALL' >> /etc/sudoers
 
 # Switch to new uer and workdir.
-USER ${USER_ID}
+USER 1000
 WORKDIR /home/user
 
 # Add local user binary folder to PATH variable.
@@ -158,7 +154,7 @@ RUN python3.10 -m pip install omegaconf
 ADD . /home/user/nerfstudio
 USER root
 RUN chown -R user /home/user/nerfstudio
-USER ${USER_ID}
+USER 1000
 
 # Install nerfstudio dependencies.
 RUN cd nerfstudio && \
@@ -168,8 +164,6 @@ RUN cd nerfstudio && \
 # Change working directory
 WORKDIR /workspace
 
-# Install nerfstudio cli auto completion
-RUN ns-install-cli --mode install
+# Install nerfstudio cli auto completion and enter shell if no command was provided.
+CMD ns-install-cli --mode install && /bin/bash
 
-# Bash as default entrypoint.
-CMD /bin/bash -l

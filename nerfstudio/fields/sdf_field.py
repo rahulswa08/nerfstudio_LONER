@@ -33,7 +33,12 @@ from nerfstudio.field_components.encodings import NeRFEncoding
 from nerfstudio.field_components.field_heads import FieldHeadNames
 from nerfstudio.field_components.spatial_distortions import SpatialDistortion
 from nerfstudio.fields.base_field import Field, FieldConfig
-from nerfstudio.utils.external import tcnn
+
+try:
+    import tinycudann as tcnn
+except ModuleNotFoundError:
+    # tinycudann module doesn't exist
+    pass
 
 
 class LearnedVariance(nn.Module):

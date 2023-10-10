@@ -1,0 +1,9 @@
+rahulswa@krabby:~/LonerSLAM/examples$ 
+    
+        python3 run_rosbag.py ../cfg/fusion_portable/canteen.yaml --lite
+
+rahulswa@krabby:~/LonerSLAM/analysis$ 
+        
+        python3 renderer.py ../outputs/canteen_071123_171213/
+
+        

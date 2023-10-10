@@ -175,8 +175,6 @@ def test_equall_nerfacc():
         t_min_nerfacc = t_min_nerfacc.squeeze(-1)
         # time4 = time.time()
 
-        # print("pytorch ", time2-time1)
-        # print("nerfacc ", time4-time3)
 
         assert torch.allclose(t_min, t_min_nerfacc, rtol=0.001)
         assert torch.allclose(t_max, t_max_nerfacc, rtol=0.001)

@@ -33,7 +33,6 @@ from torch import Tensor
 
 from nerfstudio.cameras.cameras import Cameras
 from nerfstudio.data.datasets.base_dataset import InputDataset
-from nerfstudio.data.scene_box import OrientedBox
 from nerfstudio.pipelines.base_pipeline import Pipeline, VanillaPipeline
 from nerfstudio.utils.rich_utils import CONSOLE, ItersPerSecColumn
 
@@ -85,9 +84,8 @@ def generate_point_cloud(
     depth_output_name: str = "depth",
     normal_output_name: Optional[str] = None,
     use_bounding_box: bool = True,
-    bounding_box_min: Optional[Tuple[float, float, float]] = None,
-    bounding_box_max: Optional[Tuple[float, float, float]] = None,
-    crop_obb: Optional[OrientedBox] = None,
+    bounding_box_min: Tuple[float, float, float] = (-1.0, -1.0, -1.0),
+    bounding_box_max: Tuple[float, float, float] = (1.0, 1.0, 1.0),
     std_ratio: float = 10.0,
 ) -> o3d.geometry.PointCloud:
     """Generate a point cloud from a nerf.
@@ -121,8 +119,7 @@ def generate_point_cloud(
     rgbs = []
     normals = []
     view_directions = []
-    if use_bounding_box and (crop_obb is not None and bounding_box_max is not None):
-        CONSOLE.print("Provided aabb and crop_obb at the same time, using only the obb", style="bold yellow")
+
     with progress as progress_bar:
         task = progress_bar.add_task("Generating Point Cloud", total=num_points)
         while not progress_bar.finished:
@@ -166,15 +163,12 @@ def generate_point_cloud(
                 normal = normal[mask]
 
             if use_bounding_box:
-                if crop_obb is None:
-                    comp_l = torch.tensor(bounding_box_min, device=point.device)
-                    comp_m = torch.tensor(bounding_box_max, device=point.device)
-                    assert torch.all(
-                        comp_l < comp_m
-                    ), f"Bounding box min {bounding_box_min} must be smaller than max {bounding_box_max}"
-                    mask = torch.all(torch.concat([point > comp_l, point < comp_m], dim=-1), dim=-1)
-                else:
-                    mask = crop_obb.within(point)
+                comp_l = torch.tensor(bounding_box_min, device=point.device)
+                comp_m = torch.tensor(bounding_box_max, device=point.device)
+                assert torch.all(
+                    comp_l < comp_m
+                ), f"Bounding box min {bounding_box_min} must be smaller than max {bounding_box_max}"
+                mask = torch.all(torch.concat([point > comp_l, point < comp_m], dim=-1), dim=-1)
                 point = point[mask]
                 rgb = rgb[mask]
                 view_direction = view_direction[mask]

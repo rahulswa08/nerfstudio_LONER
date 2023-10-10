@@ -108,7 +108,7 @@ class Optimizers:
         Args:
             param_group_name: name of scheduler to step forward
         """
-        if "scheduler" in self.config[param_group_name]:
+        if self.config.param_group_name.scheduler:  # type: ignore
             self.schedulers[param_group_name].step()
 
     def zero_grad_all(self) -> None:

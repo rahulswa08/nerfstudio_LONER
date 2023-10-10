@@ -21,6 +21,7 @@ BLACKLIST = [
     "instant-ngp",
     "instant-ngp-bounded",
     "nerfacto-big",
+    "volinga",
     "phototourism",
     "depth-nerfacto",
     "neus",
@@ -29,7 +30,7 @@ BLACKLIST = [
 ]
 
 
-def set_reduced_config(config: TrainerConfig, tmp_path: Path):
+def set_reduced_config(config: TrainerConfig):
     """Reducing the config settings to speedup test"""
     config.machine.device_type = "cpu"
     if hasattr(config.pipeline.model, "implementation"):
@@ -56,15 +57,11 @@ def set_reduced_config(config: TrainerConfig, tmp_path: Path):
     # remove viewer
     config.viewer.quit_on_train_completion = True
 
-    # timestamp & output directory
-    config.set_timestamp()
-    config.output_dir = tmp_path / "outputs"
-
     return config
 
 
 @pytest.mark.filterwarnings("ignore::DeprecationWarning")
-def test_train(tmp_path: Path):
+def test_train():
     """test run train script works properly"""
     all_config_names = method_configs.keys()
     for config_name in all_config_names:
@@ -73,16 +70,16 @@ def test_train(tmp_path: Path):
             continue
         print(f"testing run for: {config_name}")
         config = method_configs[config_name]
-        config = set_reduced_config(config, tmp_path)
+        config = set_reduced_config(config)
 
         train_loop(local_rank=0, world_size=0, config=config)
 
 
-def test_simple_io(tmp_path: Path):
+def test_simple_io():
     """test to check minimal data IO works correctly"""
     config = method_configs["vanilla-nerf"]
     config.pipeline.datamanager.dataparser = MinimalDataParserConfig(data=Path("tests/data/minimal_parser"))
-    config = set_reduced_config(config, tmp_path)
+    config = set_reduced_config(config)
     train_loop(local_rank=0, world_size=0, config=config)
 
 

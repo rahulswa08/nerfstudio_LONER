@@ -25,7 +25,13 @@ from nerfstudio.field_components.base_field_component import FieldComponent
 from nerfstudio.utils.printing import print_tcnn_speed_warning
 
 from nerfstudio.utils.rich_utils import CONSOLE
-from nerfstudio.utils.external import TCNN_EXISTS, tcnn
+
+try:
+    import tinycudann as tcnn
+
+    TCNN_EXISTS = True
+except ModuleNotFoundError:
+    TCNN_EXISTS = False
 
 
 def activation_to_tcnn_string(activation: Union[nn.Module, None]) -> str:

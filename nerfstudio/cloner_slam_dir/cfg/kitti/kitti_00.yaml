@@ -1,0 +1,27 @@
+baseline: defaults.yaml
+dataset: /mnt/ws-frb/users/frank/kitti/00.bag # ~/LonerSLAM/sandbox/00.bag
+calibration: NULL
+groundtruth_traj: NULL
+experiment_name: kitti_00
+dataset_family: kitti
+changes:
+  system:
+    lidar_only: True
+    world_cube:
+      compute_from_groundtruth: False
+      trajectory_bounding_box:
+        x: [-500, 500] # right
+        y: [-500, 500]
+        z: [-500, 500] # front 
+    ros_names:
+      camera: NULL
+      lidar: "velodyne"
+      camera_suffix: NULL
+      topic_prefix: ""
+  mapper:
+    optimizer:
+      model_config:
+        data:
+          ray_range: &ray_range [1, 150]
+        model:
+          ray_range: *ray_range

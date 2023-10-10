@@ -127,7 +127,7 @@ class RenderStateMachine(threading.Thread):
         assert camera is not None, "render called before viewer connected"
 
         with self.viewer.train_lock if self.viewer.train_lock is not None else contextlib.nullcontext():
-            camera_ray_bundle = camera.generate_rays(camera_indices=0, aabb_box=self.viewer.get_model().render_aabb)
+            camera_ray_bundle = camera.generate_rays(camera_indices=0, aabb_box=self.viewer.get_model().render_aabb, keep_shape=True)
 
             with TimeWriter(None, None, write=False) as vis_t:
                 self.viewer.get_model().eval()
@@ -147,6 +147,7 @@ class RenderStateMachine(threading.Thread):
                     with torch.no_grad():
                         outputs = self.viewer.get_model().get_outputs_for_camera_ray_bundle(camera_ray_bundle)
                 self.viewer.get_model().train()
+
         num_rays = len(camera_ray_bundle)
         render_time = vis_t.duration
         if writer.is_initialized():
@@ -158,26 +159,59 @@ class RenderStateMachine(threading.Thread):
 
     def run(self):
         """Main loop for the render thread"""
+        action = None
+        import time
         while True:
-            self.render_trigger.wait()
+            # now = time.time()
+            # seconds = int(now % 60)
+            # print("loop started  here: ", seconds)
+            self.render_trigger.wait(timeout=5.0)
             self.render_trigger.clear()
-            action = self.next_action
-            assert action is not None, "Action should never be None at this point"
-            self.next_action = None
-            if self.state == "high" and action.action == "static":
-                # if we are in high res and we get a static action, we don't need to do anything
-                continue
-            self.state = self.transitions[self.state][action.action]
-            try:
-                with viewer_utils.SetTrace(self.check_interrupt):
-                    outputs = self._render_img(action.cam_msg)
-            except viewer_utils.IOChangeException:
-                # if we got interrupted, don't send the output to the viewer
-                continue
-            self._send_output_to_viewer(outputs)
-            # if we rendered a static low res, we need to self-trigger a static high-res
-            if self.state == "low_static":
-                self.action(RenderAction("static", action.cam_msg))
+            if(self.next_action is not None):
+                action = self.next_action
+                # assert action is not None, "Action should never be None at this point"
+                self.next_action = None
+            if(action is not None):
+                # now = time.time()
+                # seconds = int(now % 60)
+                # print("rendering loop here: ",seconds )
+                if self.state == "high" and action.action == "static":
+                    # if we are in high res and we get a static action, we don't need to do anything
+                    continue
+                self.state = self.transitions[self.state][action.action]
+                try:
+                    with viewer_utils.SetTrace(self.check_interrupt):
+                        outputs = self._render_img(action.cam_msg)
+                except viewer_utils.IOChangeException:
+                    # if we got interrupted, don't send the output to the viewer
+                    continue
+                self._send_output_to_viewer(outputs)
+                # if we rendered a static low res, we need to self-trigger a static high-res
+                if self.state == "low_static":
+                    self.action(RenderAction("static", action.cam_msg))
+
+    # def run(self):
+    #     """Main loop for the render thread"""
+    #     while True:
+    #         self.render_trigger.wait()
+    #         self.render_trigger.clear()
+    #         action = self.next_action
+    #         assert action is not None, "Action should never be None at this point"
+    #         self.next_action = None
+    #         if self.state == "high" and action.action == "static":
+    #             # if we are in high res and we get a static action, we don't need to do anything
+    #             continue
+    #         self.state = self.transitions[self.state][action.action]
+    #         try:
+    #             with viewer_utils.SetTrace(self.check_interrupt):
+    #                 outputs = self._render_img(action.cam_msg)
+    #         except viewer_utils.IOChangeException:
+    #             # if we got interrupted, don't send the output to the viewer
+    #             continue
+    #         self._send_output_to_viewer(outputs)
+    #         # if we rendered a static low res, we need to self-trigger a static high-res
+    #         if self.state == "low_static":
+    #             self.action(RenderAction("static", action.cam_msg))
 
     def check_interrupt(self, frame, event, arg):
         """Raises interrupt when flag has been set and not already on lowest resolution.
@@ -200,7 +234,8 @@ class RenderStateMachine(threading.Thread):
             self.output_keys = output_keys
             self.viewer.viser_server.send_output_options_message(list(outputs.keys()))
             self.viewer.control_panel.update_output_options(list(outputs.keys()))
-
+        
+        # breakpoint()
         output_render = self.viewer.control_panel.output_render
         self.viewer.update_colormap_options(
             dimensions=outputs[output_render].shape[-1], dtype=outputs[output_render].dtype

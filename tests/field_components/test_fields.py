@@ -5,14 +5,15 @@ import torch
 
 from nerfstudio.cameras.rays import Frustums, RaySamples
 from nerfstudio.fields.nerfacto_field import NerfactoField
-from nerfstudio.utils.external import TCNN_EXISTS, tcnn_import_exception
 
 
 def test_nerfacto_field():
     """Test the Nerfacto field"""
-    if not TCNN_EXISTS:
+    try:
+        import tinycudann as tcnn  # noqa: F401
+    except ModuleNotFoundError as e:
         # tinycudann module doesn't exist
-        print(tcnn_import_exception)
+        print(e)
         return
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     aabb_scale = 1.0
